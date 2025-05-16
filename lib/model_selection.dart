@@ -4,6 +4,7 @@ import 'transitions.dart';
 import 'account.dart';
 import 'homepage.dart';
 import 'cameraaudio.dart';
+import 'stats_page.dart';
 
 class ModeSelectionPage extends StatefulWidget {
   final VoidCallback onOpenSettings;
@@ -17,28 +18,46 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
   int _selectedIndex = 1; // assuming this is the "chat" tab
 
   void _onNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
+    if (_selectedIndex == index) return; // Prevent unnecessary navigation
+    Widget targetPage;
+    int? targetIndex;
     if (index == 0) {
-      Navigator.pushReplacement(
-        context,
-        fadeTransition(
-          HomePage(onOpenSettings: widget.onOpenSettings),
-        ),
-      );
+      targetPage = HomePage(onOpenSettings: widget.onOpenSettings);
     } else if (index == 1) {
       // Already on ModeSelectionPage
+      return;
     } else if (index == 2) {
-      // TODO: Navigate to stats page
+      targetPage = StatsPage(onOpenSettings: widget.onOpenSettings);
     } else if (index == 3) {
-      Navigator.pushReplacement(
-        context,
-        fadeTransition(
-          AccountPage(onOpenSettings: widget.onOpenSettings),
-        ),
-      );
+      targetPage = AccountPage(onOpenSettings: widget.onOpenSettings);
+      targetIndex = 3;
+    } else {
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => targetIndex != null
+            ? AccountPage(onOpenSettings: widget.onOpenSettings)
+            : targetPage,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          var tween = Tween(begin: 0.0, end: 1.0);
+          var fadeAnimation = animation.drive(tween);
+          return FadeTransition(opacity: fadeAnimation, child: child);
+        },
+        settings: targetIndex != null ? RouteSettings(arguments: targetIndex) : null,
+      ),
+      (route) => false,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is int && args != _selectedIndex) {
+      setState(() {
+        _selectedIndex = args;
+      });
     }
   }
 
@@ -92,7 +111,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
                   context,
                   fadeTransition(
                     VideoQuestionnairePage(
-                      onOpenSettings: widget.onOpenSettings,
+                      toggleTheme: widget.onOpenSettings,
                     ),
                   ),
                 );

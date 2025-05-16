@@ -10,6 +10,8 @@ import 'edit_profile.dart';
 import 'package:http/http.dart' as http;
 import 'faq_screen.dart';
 import 'settings_screen.dart';
+import 'stats_page.dart';
+import 'model_selection.dart';
 
 class AccountPage extends StatefulWidget {
   final VoidCallback onOpenSettings;
@@ -40,6 +42,17 @@ class _AccountPageState extends State<AccountPage> {
       ),
     );
     _loadUserProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is int && args != _selectedIndex) {
+      setState(() {
+        _selectedIndex = args;
+      });
+    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -81,8 +94,8 @@ class _AccountPageState extends State<AccountPage> {
       await supabase.auth.signOut();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => SignInPage(
+          fadeTransition(
+            SignInPage(
               onSignInSuccess: () {},
             ),
           ),
@@ -132,8 +145,8 @@ class _AccountPageState extends State<AccountPage> {
         await supabase.auth.signOut();
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => SignInPage(
+            fadeTransition(
+              SignInPage(
                 onSignInSuccess: () {},
               ),
             ),
@@ -213,24 +226,36 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   void _onNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Add your own navigation logic here
+    if (_selectedIndex == index) return; // Prevent unnecessary navigation
+    Widget targetPage;
+    int? targetIndex;
     if (index == 0) {
-      Navigator.pushReplacement(
-        context,
-        fadeTransition(
-          HomePage(onOpenSettings: widget.onOpenSettings),
-        ),
-      );
+      targetPage = HomePage(onOpenSettings: widget.onOpenSettings);
     } else if (index == 1) {
-      // Navigator.pushReplacementNamed(context, '/chat');
+      targetPage = ModeSelectionPage(onOpenSettings: widget.onOpenSettings);
+      targetIndex = 1;
     } else if (index == 2) {
-      //Stats
+      targetPage = StatsPage(onOpenSettings: widget.onOpenSettings);
     } else if (index == 3) {
       // Already on Account
+      return;
+    } else {
+      return;
     }
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => targetIndex != null
+            ? ModeSelectionPage(onOpenSettings: widget.onOpenSettings)
+            : targetPage,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          var tween = Tween(begin: 0.0, end: 1.0);
+          var fadeAnimation = animation.drive(tween);
+          return FadeTransition(opacity: fadeAnimation, child: child);
+        },
+        settings: targetIndex != null ? RouteSettings(arguments: targetIndex) : null,
+      ),
+      (route) => false,
+    );
   }
 
   void _navigateToFAQ() {

@@ -9,6 +9,7 @@ import 'transitions.dart'; // Import for custom transitions
 import 'cameraaudio.dart'; // Import to access the CameraAudioPage
 import 'package:flutter/services.dart';
 import 'model_selection.dart'; // Import to access the ModelSelectionPage
+import 'stats_page.dart'; // Import to access the StatsPage
 
 class HomePage extends StatefulWidget {
   final VoidCallback onOpenSettings;
@@ -50,10 +51,10 @@ class _HomePageState extends State<HomePage> {
 
   void _navigateToSignIn() {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => SignInPage(
+      fadeTransition(
+        SignInPage(
           onSignInSuccess: () {},
-            ),
+        ),
       ),
       (route) => false,
     );
@@ -113,7 +114,7 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = index;
     });
     if (index == 0) {
-      //Already on Home
+      // Already on Home
     } else if (index == 1) {
       Navigator.pushReplacement(
         context,
@@ -122,7 +123,12 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     } else if (index == 2) {
-      //Stats
+      Navigator.pushReplacement(
+        context,
+        fadeTransition(
+          StatsPage(onOpenSettings: widget.onOpenSettings),
+        ),
+      );
     } else if (index == 3) {
       Navigator.pushReplacement(
         context,
