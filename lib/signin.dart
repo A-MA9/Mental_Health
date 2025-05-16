@@ -129,11 +129,6 @@ class _SignInPageState extends State<SignInPage> {
     );
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF223D1B) : Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-      ),
       body: SingleChildScrollView(
         child: Column(
           children: [

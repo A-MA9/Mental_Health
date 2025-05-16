@@ -21,6 +21,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _userName = "User";
   String _userEmail = "";
+  String? _avatarUrl;
   bool _isLoading = true;
   int _selectedIndex = 0;
 
@@ -52,7 +53,7 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(
         builder: (context) => SignInPage(
           onSignInSuccess: () {},
-        ),
+            ),
       ),
       (route) => false,
     );
@@ -70,6 +71,7 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _userName = profileData['name'] ?? 'User';
           _userEmail = user.email ?? '';
+          _avatarUrl = profileData['avatar_url'] as String?;
         });
       }
     } catch (e) {
@@ -202,18 +204,23 @@ class _HomePageState extends State<HomePage> {
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: Colors.brown[700],
-                          child: Text(
+                          backgroundImage: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                              ? NetworkImage(_avatarUrl!)
+                              : null,
+                          child: (_avatarUrl == null || _avatarUrl!.isEmpty)
+                              ? Text(
                             _isLoading
                                 ? '?'
                                 : _userName.isNotEmpty
                                 ? _userName[0].toUpperCase()
                                 : 'U',
-                            style: const TextStyle(
+                                  style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                            ),
-                          ),
+                                  ),
+                                )
+                              : null,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -259,10 +266,10 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Container(
                     width: double.infinity,
-                    height: 220,
+                    height: 270,
                     margin: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFC1E1C1),
+                      color: isDark ? const Color(0xFF223D1B) : const Color(0xFFC1E1C1),
                       borderRadius: BorderRadius.circular(36),
                       boxShadow: [
                         BoxShadow(
@@ -276,11 +283,11 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         // Large bot image on the left, overlapping the card edge
                         Container(
-                          height: 220,
+                          height: 270,
                           width: 160,
                           alignment: Alignment.centerLeft,
                           child: OverflowBox(
-                            maxHeight: 240,
+                            maxHeight: 260,
                             maxWidth: 200,
                             alignment: Alignment.centerLeft,
                             child: Image.network(
@@ -293,7 +300,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(32, 36, 32, 36),
+                            padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -321,38 +328,40 @@ class _HomePageState extends State<HomePage> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w500,
-                                    color: isDark ? Colors.blue[100] : Colors.blue[700],
+                                    color: isDark ? Colors.blue[200] : Colors.blue[700],
                                     letterSpacing: 0.5,
                                   ),
                                 ),
-                                const SizedBox(height: 24),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.blueGrey[700] : Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 8,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.chat_bubble_outline, color: isDark ? Colors.white : Colors.blueAccent, size: 24),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        "Chat",
-                                        style: TextStyle(
-                                          color: isDark ? Colors.white : Colors.blueAccent,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 17,
+                                const Spacer(),
+                                Center(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.blueGrey[700] : Colors.white,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 8,
+                                          offset: Offset(0, 2),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.chat_bubble_outline, color: isDark ? Colors.white : Colors.blueAccent, size: 28),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          "Chat",
+                                          style: TextStyle(
+                                            color: isDark ? Colors.white : Colors.blueAccent,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -360,8 +369,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                      ],
-                    ),
+                        ],
+                      ),
                   ),
                 ],
               ),
