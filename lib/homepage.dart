@@ -10,6 +10,7 @@ import 'cameraaudio.dart'; // Import to access the CameraAudioPage
 import 'package:flutter/services.dart';
 import 'model_selection.dart'; // Import to access the ModelSelectionPage
 import 'stats_page.dart'; // Import to access the StatsPage
+import 'package:fl_chart/fl_chart.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onOpenSettings;
@@ -381,6 +382,11 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+            // Pie chart visualization of emotion stats
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: EmotionPieChartScroller(),
+            ),
           ],
         ),
       ),
@@ -399,5 +405,227 @@ class _HomePageState extends State<HomePage> {
         onTap: _onNavTap,
       ),
     );
+  }
+}
+
+// Pie chart scroller widget
+class EmotionPieChartScroller extends StatefulWidget {
+  @override
+  _EmotionPieChartScrollerState createState() => _EmotionPieChartScrollerState();
+}
+
+class _EmotionPieChartScrollerState extends State<EmotionPieChartScroller> with SingleTickerProviderStateMixin {
+  List<Map<String, dynamic>> _entries = [];
+  List<String> _dates = [];
+  int _currentIndex = 0;
+  bool _isLoading = true;
+  String? _error;
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fetchEmotionData();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchEmotionData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+      final data = await supabase
+          .from('emotion_analysis')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      if (data.isEmpty) {
+        setState(() {
+          _entries = [];
+          _dates = [];
+          _isLoading = false;
+        });
+        return;
+      }
+      // Group by date, pick the latest entry for each date
+      final Map<String, Map<String, dynamic>> latestByDate = {};
+      for (var entry in data) {
+        final DateTime createdAt = DateTime.parse(entry['created_at']);
+        final String dateKey = DateFormat('yyyy-MM-dd').format(createdAt);
+        if (!latestByDate.containsKey(dateKey)) {
+          latestByDate[dateKey] = entry;
+        }
+      }
+      final dates = latestByDate.keys.toList()..sort((a, b) => b.compareTo(a));
+      final entries = dates.map((d) => latestByDate[d]!).toList();
+      setState(() {
+        _entries = entries;
+        _dates = dates;
+        _isLoading = false;
+        _currentIndex = 0;
+      });
+      _controller.forward(from: 0);
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load emotion data: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _scrollLeft() {
+    if (_currentIndex < _entries.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _controller.forward(from: 0);
+      });
+    }
+  }
+
+  void _scrollRight() {
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+        _controller.forward(from: 0);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
+    }
+    if (_entries.isEmpty) {
+      return _buildNoDataBox();
+    }
+    final entry = _entries[_currentIndex];
+    final String date = _dates[_currentIndex];
+    final String emotion = entry['overall_emotion'] ?? 'unknown';
+    final double confidence = (entry['overall_confidence'] as num?)?.toDouble() ?? 0.0;
+    final Color pieColor = _getEmotionColor(emotion);
+    final double percent = (confidence * 100).clamp(0, 100);
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios),
+              onPressed: _currentIndex < _entries.length - 1 ? _scrollLeft : null,
+            ),
+            Text(
+              DateFormat('EEE, MMM d, yyyy').format(DateTime.parse(date)),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios),
+              onPressed: _currentIndex > 0 ? _scrollRight : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final animatedPercent = percent * _controller.value;
+            return SizedBox(
+              height: 180,
+              child: PieChart(
+                PieChartData(
+                  sections: [
+                    PieChartSectionData(
+                      value: animatedPercent,
+                      color: pieColor,
+                      radius: 60,
+                      title: '${animatedPercent.toStringAsFixed(0)}%',
+                      titleStyle: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    PieChartSectionData(
+                      value: 100 - animatedPercent,
+                      color: isDark ? Colors.grey[800] : Colors.grey[300],
+                      radius: 60,
+                      title: '',
+                    ),
+                  ],
+                  sectionsSpace: 0,
+                  centerSpaceRadius: 40,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        Text(
+          emotion.isNotEmpty ? emotion[0].toUpperCase() + emotion.substring(1) : 'Unknown',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: pieColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoDataBox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Center(
+        child: Text(
+          'No data available',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+        ),
+      ),
+    );
+  }
+
+  Color _getEmotionColor(String emotion) {
+    switch (emotion.toLowerCase()) {
+      case 'happy':
+      case 'joy':
+        return Colors.yellow[700]!;
+      case 'sad':
+      case 'sadness':
+        return Colors.blue[300]!;
+      case 'angry':
+      case 'anger':
+        return Colors.red[400]!;
+      case 'fear':
+        return Colors.purple[300]!;
+      case 'surprise':
+        return Colors.orange[300]!;
+      case 'disgust':
+        return Colors.green[400]!;
+      case 'neutral':
+        return Colors.grey[400]!;
+      default:
+        return Colors.grey[500]!;
+    }
   }
 }

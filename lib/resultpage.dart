@@ -29,7 +29,7 @@ class _ResultsPageState extends State<ResultsPage> {
   
   // Define multiple possible server addresses to try
   final List<String> apiUrls = [
-    "http://192.168.75.16:8000/process_all_questions/",  // Your computer's IP address - best for physical devices
+    "http://172.16.63.49:8000/process_all_questions/",  // Your computer's IP address - best for physical devices
     "http://10.0.2.2:8000/process_all_questions/"      // Special Android emulator address that maps to host's localhost
     // "http://127.0.0.1:8000/process_all_questions/"      // Direct localhost - works on some simulators
   ];
