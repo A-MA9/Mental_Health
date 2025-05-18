@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'main.dart'; // Import to access supabase client
 
 class ResultsPage extends StatefulWidget {
   final Map<String, dynamic>? resultData;
@@ -28,7 +29,7 @@ class _ResultsPageState extends State<ResultsPage> {
   
   // Define multiple possible server addresses to try
   final List<String> apiUrls = [
-    "http://172.16.63.49:8000/process_all_questions/",  // Your computer's IP address - best for physical devices
+    "http://192.168.75.16:8000/process_all_questions/",  // Your computer's IP address - best for physical devices
     "http://10.0.2.2:8000/process_all_questions/"      // Special Android emulator address that maps to host's localhost
     // "http://127.0.0.1:8000/process_all_questions/"      // Direct localhost - works on some simulators
   ];
@@ -112,7 +113,7 @@ class _ResultsPageState extends State<ResultsPage> {
             'uid': _userId,
           }),
         ).timeout(
-          Duration(seconds: 90),  // Set a timeout of 15 seconds
+          Duration(seconds: 90),  // Set a timeout of 90 seconds
           onTimeout: () {
             print('Connection to $apiUrl timed out');
             return http.Response('Timeout', 408);
@@ -127,6 +128,10 @@ class _ResultsPageState extends State<ResultsPage> {
               _resultData = data;
               _isLoading = false;
             });
+            
+            // Store the analysis results in Supabase
+            await _storeResultsInSupabase(data);
+            
             return; // Success, exit function
           } catch (e) {
             print('Error parsing response: $e');
@@ -151,6 +156,70 @@ class _ResultsPageState extends State<ResultsPage> {
              "3. No firewall is blocking the connection\n"
              "4. The server address is correct (${apiUrls[0]})";
     });
+  }
+
+  // Function to store emotion analysis results in Supabase
+  Future<void> _storeResultsInSupabase(Map<String, dynamic> data) async {
+    try {
+      // Check if the results were successfully processed
+      final bool success = data['success'] ?? false;
+      if (!success) {
+        print('Not storing unsuccessful analysis in database');
+        return;
+      }
+
+      // Extract necessary data from the results
+      final Map<String, dynamic> overall = data['overall'] ?? {};
+      final List<dynamic> questions = data['questions'] ?? [];
+      final String overallEmotion = overall['emotion'] ?? 'unknown';
+      final double overallConfidence = overall['confidence'] ?? 0.0;
+
+      // Generate a session ID
+      final String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Store the results in the emotion_analysis table
+      try {
+        await supabase
+            .from('emotion_analysis')
+            .insert({
+              'user_id': _userId,
+              'session_id': sessionId,
+              'overall_emotion': overallEmotion,
+              'overall_confidence': overallConfidence,
+              'questions': questions, // Store the entire questions array as JSONB
+              'device_info': 'Flutter App ${DateTime.now().toIso8601String()}',
+              'session_duration': null, // Could be calculated if you track session start/end
+            });
+        
+        print('Successfully stored emotion analysis in database');
+        
+        // Show success message if widget is mounted
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Analysis saved for future reference'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (error) {
+        print('Error storing emotion analysis: $error');
+        
+        // Show error message if widget is mounted
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save analysis: $error'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Exception processing emotion analysis: $e');
+    }
   }
 
   @override
