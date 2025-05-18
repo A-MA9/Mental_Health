@@ -5,6 +5,7 @@ import 'account.dart';
 import 'homepage.dart';
 import 'cameraaudio.dart';
 import 'stats_page.dart';
+import 'resultpage.dart';
 
 class ModeSelectionPage extends StatefulWidget {
   final VoidCallback onOpenSettings;
@@ -27,7 +28,10 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
       // Already on ModeSelectionPage
       return;
     } else if (index == 2) {
-      targetPage = StatsPage(onOpenSettings: widget.onOpenSettings);
+
+      
+      // targetPage = StatsPage(onOpenSettings: widget.onOpenSettings);
+      targetPage = ResultsPage();
     } else if (index == 3) {
       targetPage = AccountPage(onOpenSettings: widget.onOpenSettings);
       targetIndex = 3;
@@ -110,9 +114,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
                 Navigator.push(
                   context,
                   fadeTransition(
-                    VideoQuestionnairePage(
-                      toggleTheme: widget.onOpenSettings,
-                    ),
+                    AudioUploaderWidget()
                   ),
                 );
                 // Navigate to VideoChatScreen
