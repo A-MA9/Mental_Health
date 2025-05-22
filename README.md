@@ -57,8 +57,8 @@
 ### 1. Clone the repository
 
 ```sh
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/AnuragSuthar/Mental_Health.git
+cd Mental_Health
 ```
 
 ### 2. Install dependencies
